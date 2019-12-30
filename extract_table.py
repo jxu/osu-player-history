@@ -38,7 +38,7 @@ def extract_table_info(html_doc, date_str):
             row_dict["country"] = img_url.split('/')[-1][:-4]
 
             player_url = player_row.find("a")["href"]
-            row_dict["name"] = player_row.find("a").text
+            row_dict["username"] = player_row.find("a").text
             row_dict["id"] = int(player_url.split('/')[-1])
 
             player_row_cells = player_row.find_all("td")
@@ -56,8 +56,44 @@ def extract_table_info(html_doc, date_str):
 
         return result
 
-    print("oops")
-    return []
+    # new site table
+    table_soup = soup.find("table", class_="ranking-page-table")
+    if table_soup:
+
+
+        table_rows = table_soup.find_all("tr")
+        player_rows = table_rows[1:]
+
+        for player_row in player_rows:
+            row_dict = dict()
+            row_dict["date"] = date_str
+
+            player_row_cells = player_row.find_all("td")
+            print(player_row_cells)
+
+            row_dict["rank"] = int(player_row_cells[0].get_text().strip()[1:])
+
+            player_url = player_row_cells[1].find("a")["href"]
+            row_dict["id"] = int(player_url.split('/')[-1])
+
+            flag_span = player_row_cells[1].find("span", class_="flag-country")
+            flag_style = flag_span["style"]
+            str_idx = flag_style.find(".png")
+
+
+            row_dict["country"] = flag_style[str_idx-2:str_idx].lower()
+            row_dict["username"] = player_row_cells[1].get_text().strip()
+            row_dict["accuracy"] = float(player_row_cells[2].get_text().strip()[:-1])
+            row_dict["playcount"] = comma_int(player_row_cells[3].get_text().strip())
+            row_dict["pp"] = comma_int(player_row_cells[4].get_text().strip())
+
+            print(row_dict)
+            result.append(row_dict)
+
+        return result
+
+    # Somehow not new site or old site
+    raise Exception("Can't find table")
 
 
 def main():
@@ -65,7 +101,7 @@ def main():
 
     for snapshot_filename in sorted(os.listdir(SNAPSHOTS_DIR)):
         date_str = os.path.splitext(snapshot_filename)[0]
-        if date_str >= "20170617": continue
+        if date_str != "20170617": continue  # testing
 
         snapshot_path = os.path.join(SNAPSHOTS_DIR, snapshot_filename)
         print(snapshot_path)
@@ -75,7 +111,7 @@ def main():
             extracted_rows = extract_table_info(html_doc, date_str)
             all_rows.extend(extracted_rows)
 
-    col_names = ("date", "country", "name", "id", "rank", "accuracy",
+    col_names = ("date", "rank", "country", "username", "id", "accuracy",
                  "playcount", "pp")
 
     with open("player_history.csv", 'w') as csvfile:
