@@ -8,7 +8,13 @@ import csv
 
 SNAPSHOTS_DIR = "snapshots"
 
-def comma_int(s): return int(s.replace(',', ''))
+
+# stupid locale stuff
+def clean_int(s):
+    return ''.join(c for c in s if c not in ",.\xa0")
+
+def clean_float(s):
+    return float(s.replace('\xa0', '').replace('%', '').replace(',', '.'))
 
 
 def extract_table_info(html_doc, date_str):
@@ -44,13 +50,13 @@ def extract_table_info(html_doc, date_str):
             player_row_cells = player_row.find_all("td")
 
             row_dict["rank"] = int(player_row_cells[0].get_text()[1:])
-            row_dict["accuracy"] = float(player_row_cells[2].get_text()[:-1])
+            row_dict["accuracy"] = clean_float(player_row_cells[2].get_text())
 
             # playcount and level
             player_row_pl = player_row_cells[3].get_text().split(' ')
-            row_dict["playcount"] = comma_int(player_row_pl[0])
+            row_dict["playcount"] = clean_int(player_row_pl[0])
             pp_text = player_row_cells[4].get_text().strip()
-            row_dict["pp"] = comma_int(pp_text.split("pp")[0])
+            row_dict["pp"] = clean_int(pp_text.split("pp")[0])
 
             result.append(row_dict)
 
@@ -69,25 +75,23 @@ def extract_table_info(html_doc, date_str):
             row_dict["date"] = date_str
 
             player_row_cells = player_row.find_all("td")
-            print(player_row_cells)
 
             row_dict["rank"] = int(player_row_cells[0].get_text().strip()[1:])
 
-            player_url = player_row_cells[1].find("a")["href"]
+            # Starting from 20180317, country is also linked in cell
+            player_url = player_row_cells[1].find_all("a")[-1]["href"]
             row_dict["id"] = int(player_url.split('/')[-1])
 
             flag_span = player_row_cells[1].find("span", class_="flag-country")
             flag_style = flag_span["style"]
             str_idx = flag_style.find(".png")
 
-
             row_dict["country"] = flag_style[str_idx-2:str_idx].lower()
             row_dict["username"] = player_row_cells[1].get_text().strip()
-            row_dict["accuracy"] = float(player_row_cells[2].get_text().strip()[:-1])
-            row_dict["playcount"] = comma_int(player_row_cells[3].get_text().strip())
-            row_dict["pp"] = comma_int(player_row_cells[4].get_text().strip())
+            row_dict["accuracy"] = clean_float(player_row_cells[2].get_text().strip())
+            row_dict["playcount"] = clean_int(player_row_cells[3].get_text().strip())
+            row_dict["pp"] = clean_int(player_row_cells[4].get_text().strip())
 
-            print(row_dict)
             result.append(row_dict)
 
         return result
@@ -101,7 +105,7 @@ def main():
 
     for snapshot_filename in sorted(os.listdir(SNAPSHOTS_DIR)):
         date_str = os.path.splitext(snapshot_filename)[0]
-        if date_str != "20170617": continue  # testing
+        #if date_str < "20170617": continue  # testing
 
         snapshot_path = os.path.join(SNAPSHOTS_DIR, snapshot_filename)
         print(snapshot_path)
