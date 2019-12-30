@@ -3,6 +3,13 @@
 # osu.ppy.sh/rankings/osu/performance (new site redesign)
 # old.ppy.sh/p/pp (legacy site, not many archives so ignore)
 
+# Manually remove some pages:
+# TODO: remove automatically
+# Nov 2013 to Jan 2014: pp broke
+# https://web.archive.org/web/20140126153042/http://osu.ppy.sh/news/73929298672
+# Remove 20140125 and 20140126
+# Remove 20190805: archive.org error
+
 from datetime import date, timedelta
 import requests
 import os
