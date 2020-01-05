@@ -8,6 +8,7 @@
 # Nov 2013 to Jan 2014: pp broke
 # https://web.archive.org/web/20140126153042/http://osu.ppy.sh/news/73929298672
 # Remove 20140125 and 20140126
+# Replace 20181214084650 with 20181214085715 due to cheater
 # Remove 20190805: archive.org error
 
 from datetime import date, timedelta

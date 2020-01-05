@@ -47,15 +47,15 @@ def extract_table_info(html_doc, date_str):
             row_dict["username"] = player_row.find("a").text
             row_dict["id"] = int(player_url.split('/')[-1])
 
-            player_row_cells = player_row.find_all("td")
+            cells = player_row.find_all("td")
 
-            row_dict["rank"] = int(player_row_cells[0].get_text()[1:])
-            row_dict["accuracy"] = clean_float(player_row_cells[2].get_text())
+            row_dict["rank"] = int(cells[0].get_text()[1:])
+            row_dict["accuracy"] = clean_float(cells[2].get_text())
 
             # playcount and level
-            player_row_pl = player_row_cells[3].get_text().split(' ')
+            player_row_pl = cells[3].get_text().split(' ')
             row_dict["playcount"] = clean_int(player_row_pl[0])
-            pp_text = player_row_cells[4].get_text().strip()
+            pp_text = cells[4].get_text().strip()
             row_dict["pp"] = clean_int(pp_text.split("pp")[0])
 
             result.append(row_dict)
@@ -74,23 +74,23 @@ def extract_table_info(html_doc, date_str):
             row_dict = dict()
             row_dict["date"] = date_str
 
-            player_row_cells = player_row.find_all("td")
+            cells = player_row.find_all("td")
 
-            row_dict["rank"] = int(player_row_cells[0].get_text().strip()[1:])
+            row_dict["rank"] = int(cells[0].get_text().strip()[1:])
 
             # Starting from 20180317, country is also linked in cell
-            player_url = player_row_cells[1].find_all("a")[-1]["href"]
+            player_url = cells[1].find_all("a")[-1]["href"]
             row_dict["id"] = int(player_url.split('/')[-1])
 
-            flag_span = player_row_cells[1].find("span", class_="flag-country")
+            flag_span = cells[1].find("span", class_="flag-country")
             flag_style = flag_span["style"]
             str_idx = flag_style.find(".png")
 
             row_dict["country"] = flag_style[str_idx-2:str_idx].lower()
-            row_dict["username"] = player_row_cells[1].get_text().strip()
-            row_dict["accuracy"] = clean_float(player_row_cells[2].get_text().strip())
-            row_dict["playcount"] = clean_int(player_row_cells[3].get_text().strip())
-            row_dict["pp"] = clean_int(player_row_cells[4].get_text().strip())
+            row_dict["username"] = cells[1].get_text().strip()
+            row_dict["accuracy"] = clean_float(cells[2].get_text().strip())
+            row_dict["playcount"] = clean_int(cells[3].get_text().strip())
+            row_dict["pp"] = clean_int(cells[4].get_text().strip())
 
             result.append(row_dict)
 
