@@ -1,4 +1,3 @@
-library(plotly)
 library(tidyverse)
 library(lubridate)
 library(gganimate)
@@ -24,36 +23,58 @@ username_map <-
 #  player_history %>%
 #  left_join(username_map, by = "id")
 
-# To make plotting easier, create new rows: every combination of player and date
-# and add in usernames again
+
+# Interpolate values (pp, etc.) *only if* consecutive snapshots are in top 10
+# Mostly constant variables (username, country) use LOCF
+interpolate_consecutive <- function(df) {
+  df %>%
+    arrange(date) %>%
+    mutate(is_snapshot = !is.na(rank),
+           in_top = lead(is_snapshot, default = FALSE) & is_snapshot) %>%
+    complete(date = seq(min(date), max(date), by = "day"),
+             fill = list(is_snapshot = FALSE)) %>%
+    fill(in_top, 
+         id,
+         country,
+         username) %>%
+    # possibly use mutate_at
+    mutate(in_top = (in_top | is_snapshot),
+           pp = if_else(in_top, pp %>% tween_fill("linear"), NA_real_),
+           accuracy = if_else(in_top, accuracy %>% tween_fill("linear"), NA_real_),
+           playcount = if_else(in_top, playcount %>% tween_fill("linear"), NA_real_)) 
+}
+
+# test
+top_n <- 10
+df <- bar_race %>% filter(date == ymd("20120422")) 
+# arrange puts NAs at bottom
+
+df %>% arrange(pp) %>% 
+  mutate(rank = c(1:top_n, rep(NA, nrow(df)-top_n))) %>% View
+
+
+# Rank recalculation may result in inaccuracies since pp is interpolated
+recalculate_rank <- function(df, top_n) {
+  df %>% 
+    arrange(desc(pp)) %>% 
+    mutate(rank = c(1:top_n, rep(NA, nrow(df)-top_n)))
+}
+
+# To make plotting easier, "complete" dataframe by creating new rows: every combination of player and date 
+# Interpolate days and further interpolate frames
 bar_race <- 
   player_history %>%
   filter(rank <= 10) %>%
-  complete(id, date)
-
-# Interpolate values (pp, etc.) only if consecutive snapshots are in top 10
-
-test_df <- 
-  bar_race %>%
-  filter(id == 213014) %>%
-  arrange(date) %>%
-  mutate(in_top = !is.na(rank),
-         mask = lead(in_top, default = FALSE) & in_top) %>%
-  complete(date = seq(min(date), max(date), by = "day")) %>%
-  fill(mask, id) %>%
-  mutate(mask = (mask | in_top) %>% replace_na(FALSE),
-         pp = if_else(mask, pp %>% tween_fill("linear"), NA_real_),
-         accuracy = if_else(mask, accuracy %>% tween_fill("linear"), NA_real_),
-         playcount = if_else(mask, playcount %>% tween_fill("linear"), NA_real_))
+  complete(id, date) %>%
+  group_by(id) %>%
+  do(interpolate_consecutive(.)) %>%
+  group_by(date) %>%
+  do(recalculate_rank(., 10))
 
 
 
-# testing data
-# handling rank >= 10 to fly in from bottom
-# need to handle imputing username
-df <- player_history_10 %>% 
-  filter(date <= ymd("20130101")) %>%
-  complete(id, date, fill = list(rank = 1000, pp = 0)) 
+
+
 
 # animated bar chart (coord_flip is bugged)
 p <- ggplot(df, aes(y = rank, group = id)) + 
