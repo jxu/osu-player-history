@@ -29,16 +29,16 @@ username_map <-
 interpolate_consecutive <- function(df) {
   df %>%
     arrange(date) %>%
-    mutate(is_snapshot = !is.na(rank),
-           in_top = lead(is_snapshot, default = FALSE) & is_snapshot) %>%
+    mutate(in_snapshot = !is.na(rank),
+           in_top = lead(in_snapshot, default = FALSE) & in_snapshot) %>%
     complete(date = seq(min(date), max(date), by = "day"),
-             fill = list(is_snapshot = FALSE)) %>%
+             fill = list(in_snapshot = FALSE)) %>%
     fill(in_top, 
          id,
          country,
          username) %>%
     # possibly use mutate_at
-    mutate(in_top = (in_top | is_snapshot),
+    mutate(in_top = (in_top | in_snapshot),
            pp = if_else(in_top, pp %>% tween_fill("linear"), NA_real_),
            accuracy = if_else(in_top, accuracy %>% tween_fill("linear"), NA_real_),
            playcount = if_else(in_top, playcount %>% tween_fill("linear"), NA_real_)) 
