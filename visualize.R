@@ -22,9 +22,9 @@ username_map <-
 # To make interpolation easier, "complete" dataframe by creating new rows: 
 # every combination of player and date 
 # interpolate: 
-history_day <- 
+player_history_day <- 
   player_history %>%
-  filter(rank <= 20 & date < ymd("20130101")) %>%  # for testing, remove later
+  filter(rank <= 20 & date < ymd("20120801")) %>%  # for testing, remove later
   complete(id, date = seq(min(date), max(date), by = "day")) %>%
   arrange(date, desc(pp)) %>% # optional at this point
   group_by(id) %>%
@@ -36,19 +36,23 @@ history_day <-
 # create more frames between days
 # TODO: interpolate between days?
 bar_race <- 
-  history_day %>%
+  player_history_day %>%
   slice(rep(row_number(), 4)) %>%
   group_by(id) %>%
   arrange(date) %>%
   mutate(frame = row_number()) %>%
   ungroup()
 
-# testing moving average
-# TODO: fix first and end NAs
-
-wts <- c(1, 1, 1:5, 4:1, 1, 1)
-ma <- function(x){ stats::filter(x, wts/sum(wts), sides = 2) %>% as.vector }
-
+# weighted centered moving average for animating bar movement
+# to see with step function: plot(wma(c(rep(0,20), rep(1,20))))
+wma <- function(x) { 
+  wts <- c(rep(1,3), 1:5, 4:1, rep(1,3))
+  nside <- (length(wts)-1)/2
+  # pad x with begin and end values for filter to avoid NAs
+  xa <- c(rep(first(x), nside), x, rep(last(x), nside)) 
+  z <- stats::filter(xa, wts/sum(wts), sides = 2) %>% as.vector 
+  z[(nside+1):(nside+length(x))]
+}
 
 
 # recalculate rank for every frame
@@ -62,7 +66,7 @@ bar_race <-
   # then make nice bar position transitions
   group_by(id) %>%
   arrange(frame) %>%
-  mutate(bar_pos = ma(rank)) %>%
+  mutate(bar_pos = wma(rank)) %>%
   ungroup()
   
 
