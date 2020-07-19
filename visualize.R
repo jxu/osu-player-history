@@ -19,30 +19,6 @@ username_map <-
             current_username = username[which.max(date)])
 
 
-
-# Interpolate values (pp, etc.) *only if* consecutive snapshots are in top 10
-# probably not going to use as it's too complicated
-# Mostly constant variables (username, country) use LOCF
-# interpolate_consecutive <- function(df) {
-#   df %>%
-#     arrange(date) %>%
-#     mutate(in_snapshot = !is.na(rank),
-#            in_top = lead(in_snapshot, default = FALSE) & in_snapshot) %>%
-#     complete(date = seq(min(date), max(date), by = "day"),
-#              fill = list(in_snapshot = FALSE)) %>%
-#     fill(in_top, 
-#          id,
-#          country,
-#          username) %>%
-#     # possibly use mutate_at
-#     mutate(in_top = (in_top | in_snapshot),
-#            pp = if_else(in_top, pp %>% tween_fill("linear"), NA_real_),
-#            accuracy = if_else(in_top, accuracy %>% tween_fill("linear"), NA_real_),
-#            playcount = if_else(in_top, playcount %>% tween_fill("linear"), NA_real_)) 
-# }
-
-
-
 # Rank recalculation may result in inaccuracies since pp is interpolated
 recalculate_rank <- function(df, top_n) {
   df %>% 
@@ -67,18 +43,19 @@ recalculate_rank <- function(df, top_n) {
 # interpolate: 
 bar_race <- 
   player_history %>%
-  filter(rank <= 10 & date < ymd("20130101")) %>%  # for testing, remove later
+  filter(rank <= 20 & date < ymd("20130101")) %>%  # for testing, remove later
   complete(id, date = seq(min(date), max(date), by = "day")) %>%
   arrange(date, desc(pp)) %>% # optional at this point
   group_by(id) %>%
-  mutate(country = tween_fill(country, "linear"),  # mutate_at?
-         username = tween_fill(username, "linear"),
-         accuracy = tween_fill(accuracy, "linear"),
-         playcount = tween_fill(playcount, "linear"),
-         pp = tween_fill(pp, "linear")
-         ) 
+  mutate_at(vars(country, username, accuracy, playcount, pp), 
+            ~ tween_fill(., "linear"))
+
 
 #interpolate over frames
+
+bar_race <- 
+  bar_race %>%
+  mutate(frame_ = date)
 
 
 # place bars manually 
@@ -100,9 +77,11 @@ p <- ggplot(bar_race, aes(y = rank)) +
             hjust = 0) + 
   geom_text(aes(x = pp, label = as.character(round(pp))),
             hjust = 1) +
-  coord_cartesian(xlim = c(5000, 7000), ylim = c(10, 1)) + 
+  geom_text(aes(x = 6000, y = 10, label = frame_), check_overlap = TRUE) +
+  scale_y_reverse(breaks = 1:10) + 
+  coord_cartesian(xlim = c(5000, 7000), ylim = c(1, 10)) + 
   theme_minimal() +
-  transition_manual(date)
+  transition_manual(frame_)
 
-animate(p, fps = 4, renderer = gifski_renderer())
+animate(p, fps = 10, nframes = length(unique(bar_race$frame_)), renderer = gifski_renderer())
  
