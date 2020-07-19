@@ -34,6 +34,7 @@ history_day <-
 
 
 # create more frames between days
+# TODO: interpolate between days?
 bar_race <- 
   history_day %>%
   slice(rep(row_number(), 4)) %>%
@@ -44,7 +45,9 @@ bar_race <-
 
 # testing moving average
 # TODO: fix first and end NAs
-ma <- function(x, n = 9){ stats::filter(x, rep(1 / n, n), sides = 2) %>% as.vector }
+
+wts <- c(1, 1, 1:5, 4:1, 1, 1)
+ma <- function(x){ stats::filter(x, wts/sum(wts), sides = 2) %>% as.vector }
 
 
 
