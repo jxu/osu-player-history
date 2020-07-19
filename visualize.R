@@ -24,7 +24,7 @@ username_map <-
 # interpolate: 
 history_day <- 
   player_history %>%
-  filter(rank <= 20 & date < ymd("20120601")) %>%  # for testing, remove later
+  filter(rank <= 20 & date < ymd("20130101")) %>%  # for testing, remove later
   complete(id, date = seq(min(date), max(date), by = "day")) %>%
   arrange(date, desc(pp)) %>% # optional at this point
   group_by(id) %>%
@@ -42,19 +42,29 @@ bar_race <-
   mutate(frame = row_number()) %>%
   ungroup()
 
+# testing moving average
+# TODO: fix first and end NAs
+ma <- function(x, n = 9){ stats::filter(x, rep(1 / n, n), sides = 2) %>% as.vector }
 
-# place bars manually, recalculating rank and bar positions for every frame
+
+
+# recalculate rank for every frame
 bar_race <-
   bar_race %>% 
   group_by(frame) %>% 
   arrange(desc(pp)) %>%
-  mutate(rank = row_number(),
-         bar_pos = rank) %>%
-  ungroup()
+  mutate(rank = row_number()) %>%  # TODO: assign unknown ranks the same value
+  ungroup() %>%
 
+  # then make nice bar position transitions
+  group_by(id) %>%
+  arrange(frame) %>%
+  mutate(bar_pos = ma(rank)) %>%
+  ungroup()
+  
 
 # testing animated bar chart
-p <- ggplot(bar_race, aes(y = rank)) + 
+p <- ggplot(bar_race, aes(y = bar_pos)) + 
   geom_tile(aes(x = pp / 2,
                 height = 0.9, width = pp), fill = "pink") +
   geom_text(aes(x = 5000, label = username), 
