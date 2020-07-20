@@ -2,6 +2,7 @@ library(tidyverse)
 library(lubridate)
 library(gganimate)
 library(tweenr)
+library(grid)
 
 player_history <- read_csv("player_history.csv")
 
@@ -24,7 +25,7 @@ username_map <-
 # interpolate: 
 player_history_day <- 
   player_history %>%
-  filter(rank <= 20 & date < ymd("20120801")) %>%  # for testing, remove later
+  filter(rank <= 20 & date < ymd("20120601")) %>%  # for testing, remove later
   complete(id, date = seq(min(date), max(date), by = "day")) %>%
   arrange(date, desc(pp)) %>% # optional at this point
   group_by(id) %>%
@@ -46,7 +47,7 @@ bar_race <-
 # weighted centered moving average for animating bar movement
 # to see with step function: plot(wma(c(rep(0,20), rep(1,20))))
 wma <- function(x) { 
-  wts <- c(rep(1,3), 1:5, 4:1, rep(1,3))
+  wts <- c(seq(0.5, 4, 0.5), seq(3.5, 0.5, -0.5))
   nside <- (length(wts)-1)/2
   # pad x with begin and end values for filter to avoid NAs
   xa <- c(rep(first(x), nside), x, rep(last(x), nside)) 
@@ -63,7 +64,7 @@ bar_race <-
   mutate(rank = row_number()) %>%  # TODO: assign unknown ranks the same value
   ungroup() %>%
 
-  # then make nice bar position transitions
+  # then make nice bar position transitions with weighted moving avg
   group_by(id) %>%
   arrange(frame) %>%
   mutate(bar_pos = wma(rank)) %>%
@@ -78,11 +79,15 @@ p <- ggplot(bar_race, aes(y = bar_pos)) +
             hjust = 0) + 
   geom_text(aes(x = pp, label = as.character(round(pp))),
             hjust = 1) +
-  geom_text(aes(x = 6000, y = 10, label = frame), check_overlap = TRUE) +
+  
+  geom_text(aes(x = 6000, y = 0, label = date), check_overlap = TRUE) + 
+  
   scale_y_reverse(breaks = 1:10) + 
-  coord_cartesian(xlim = c(5000, 7000), ylim = c(1, 10)) + 
-  theme_minimal() +
+  coord_cartesian(xlim = c(5000, 7000), ylim = c(0, 10)) + 
+  
+  theme_minimal() + 
   transition_manual(frame)
 
-animate(p, fps = 30, nframes = max(bar_race$frame), renderer = gifski_renderer())
+animate(p, fps = 30, nframes = max(bar_race$frame), 
+        renderer = gifski_renderer())
  
